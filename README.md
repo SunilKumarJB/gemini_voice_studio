@@ -47,6 +47,7 @@ Open `http://localhost:8000` in your browser.
 ./deploy.sh
 
 # Or specify Project ID, Region, and Service Name explicitly:
+./deploy.sh <PROJECT_ID> us-central1 gemini-voice-studio
 ```
 
 <div align="center">
@@ -56,5 +57,3 @@ Open `http://localhost:8000` in your browser.
 <sub>A Gemini use-case demonstration. Not an official Google product.</sub>
 
 </div>
-./deploy.sh llm-project-52521 us-central1 gemini-voice-studio
-```
