@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google AI Studio — Gemini 3.8 Flash TTS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+
+  <!-- Toast Notifications -->
+  <div id="toast-container"></div>
+
+  <!-- ========================================================================
+       GOOGLE AI STUDIO 3-PANE SHELL
+       ======================================================================== -->
+  <div class="flex flex-1 h-screen w-screen overflow-hidden relative">
+
+    <!-- ======================================================================
+         1. LEFT NAVIGATION RAIL (AI Studio Sidebar)
+         ====================================================================== -->
+    <aside id="left-nav-sidebar" class="w-56 bg-[#1E1F20] border-r border-[#282A2C] flex flex-col justify-between shrink-0 select-none">
+      
+      <!-- Top Brand & Navigation Links -->
+      <div class="p-3 space-y-5 overflow-y-auto flex-1">
+        <!-- Brand Header -->
+        <div class="flex items-center justify-between px-2 pt-1">
+          <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-[#A8C7FA]/15 border border-[#A8C7FA]/30 flex items-center justify-center text-[#A8C7FA] shrink-0">
+              <i data-lucide="audio-waveform" class="w-4 h-4"></i>
+            </div>
+            <div class="min-w-0">
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-semibold text-[#E3E3E3] tracking-tight whitespace-nowrap">AI Studio</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#282A2C] text-[#A8C7FA] whitespace-nowrap">TTS 3.8</span>
+              </div>
+              <p class="text-[11px] text-[#8E918F] whitespace-nowrap">Vertex AI &bull; Global</p>
+            </div>
+          </div>
+          <button onclick="toggleLeftSidebar()" class="md:hidden text-[#8E918F] hover:text-white p-1">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Primary Navigation -->
+        <nav class="space-y-4">
+          <div class="space-y-1">
+            <div class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8E918F]">Playground</div>
+            <button class="nav-tab active" data-tab="director" onclick="switchTab('director')">
+              <i data-lucide="sliders-horizontal" class="w-4 h-4 shrink-0"></i>
+              <span>Speech Playground</span>
+            </button>
+            <button class="nav-tab" data-tab="streaming" onclick="switchTab('streaming')">
+              <i data-lucide="activity" class="w-4 h-4 shrink-0"></i>
+              <span>Live Streaming</span>
+            </button>
+          </div>
+
+          <div class="space-y-1">
+            <div class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8E918F]">Voices</div>
+            <button class="nav-tab" data-tab="library" onclick="switchTab('library')">
+              <i data-lucide="library" class="w-4 h-4 shrink-0"></i>
+              <span>Voice Library</span>
+            </button>
+            <button class="nav-tab" data-tab="design" onclick="switchTab('design')">
+              <i data-lucide="wand-2" class="w-4 h-4 shrink-0"></i>
+              <span>Design a Voice</span>
+            </button>
+            <button class="nav-tab" data-tab="replication" onclick="switchTab('replication')">
+              <i data-lucide="mic" class="w-4 h-4 shrink-0"></i>
+              <span>Clone a Voice</span>
+            </button>
+            <button class="nav-tab justify-between" data-tab="vault" onclick="switchTab('vault')">
+              <span class="flex items-center gap-2.5">
+                <i data-lucide="database" class="w-4 h-4 shrink-0"></i>
+                <span>Saved Voices</span>
+              </span>
+              <span id="vault-count-badge" class="px-1.5 py-0.5 text-[10px] rounded-full bg-[#282A2C] text-[#A8C7FA] font-mono">0</span>
+            </button>
+          </div>
+
+          <div class="space-y-1">
+            <div class="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[#8E918F]">Developer</div>
+            <button class="nav-tab" data-tab="code" onclick="switchTab('code')">
+              <i data-lucide="code-2" class="w-4 h-4 shrink-0"></i>
+              <span>Get Code &amp; Docs</span>
+            </button>
+          </div>
+        </nav>
+      </div>
+
+      <!-- Bottom Project & Connection Status Footer -->
+      <div class="p-3 border-t border-[#282A2C] space-y-2 bg-[#18191A] shrink-0">
+        <div class="flex items-center justify-between gap-1 px-1">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <span id="auth-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 shrink-0"></span>
+            <input id="header-project-id" type="text" placeholder="gcp-project-id"
+              class="bg-transparent text-xs font-mono text-[#E3E3E3] focus:outline-none w-full truncate border-b border-transparent focus:border-[#A8C7FA]"
+              onchange="syncProjectId(this.value)" title="Google Cloud Project ID" />
+          </div>
+          <button onclick="toggleSettingsModal()" class="text-[#8E918F] hover:text-white p-1 rounded hover:bg-[#282A2C] shrink-0" title="Connection Settings">
+            <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+        <button id="sim-mode-btn" onclick="toggleSimMode()" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-[#282A2C]/70 hover:bg-[#282A2C] text-[11px] text-[#C4C7C5] transition-colors whitespace-nowrap" title="Switch between Live Vertex AI API and offline Demo Synth">
+          <span class="flex items-center gap-1.5 truncate">
+            <i data-lucide="radio" class="w-3 h-3 text-emerald-400 shrink-0"></i>
+            <span id="sim-mode-label" class="truncate">Mode: Live Vertex API</span>
+          </span>
+          <i data-lucide="chevrons-up-down" class="w-3 h-3 text-[#8E918F] shrink-0"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- ======================================================================
+         2. CENTER WORKSPACE + BOTTOM AUDIO / RUN BAR
+         ====================================================================== -->
+    <div class="flex-1 flex flex-col min-w-0 bg-[#131314] overflow-hidden">
+
+      <!-- Slim Top Workspace Bar (Never wraps or deforms) -->
+      <header class="h-12 px-4 sm:px-6 border-b border-[#282A2C] flex items-center justify-between gap-3 shrink-0 bg-[#131314]">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <button onclick="toggleLeftSidebar()" class="md:hidden btn btn-ghost p-1.5" title="Toggle Menu">
+            <i data-lucide="menu" class="w-4 h-4"></i>
+          </button>
+          <h1 id="workspace-title" class="text-sm font-semibold text-[#E3E3E3] whitespace-nowrap shrink-0">Speech Playground</h1>
+          <div class="hidden xl:flex items-center gap-2 text-xs text-[#8E918F] whitespace-nowrap overflow-hidden">
+            <span>&bull;</span>
+            <span>Voice: <strong id="active-voice-banner" class="text-[#A8C7FA] font-mono font-normal">Kore</strong></span>
+            <span>&bull;</span>
+            <span id="active-format-banner" class="font-mono text-[11px]">AUDIO_WAV (24kHz)</span>
+          </div>
+        </div>
+
+        <!-- Top Right Quick Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Starter Preset Selector -->
+          <select id="starter-preset-select" onchange="if(this.value){loadPreset(this.value); this.value='';}" class="select-field text-xs py-1.5 w-44 sm:w-48 bg-[#1E1F20]">
+            <option value="">Load starter example...</option>
+            <option value="colab_basic">1. Everyday Greeting (Fenrir)</option>
+            <option value="colab_podcaster">2. Styled Podcaster (Hiking)</option>
+            <option value="colab_tags">3. Late-Night Debugging (&lt;tags&gt;)</option>
+            <option value="colab_spanish">4. Multilingual Spanish (Despina)</option>
+            <option value="colab_multi">5. 2-Speaker Dialogue (Ryan &amp; Katie)</option>
+            <option value="docs_backchannel">6. Overlapping Backchannels (|pipe|)</option>
+          </select>
+
+          <button onclick="switchTab('code')" class="btn btn-secondary text-xs py-1.5 px-3" title="View Python & cURL Code">
+            <i data-lucide="code" class="w-3.5 h-3.5"></i>
+            <span class="hidden lg:inline">Get code</span>
+          </button>
+
+          <button onclick="clearScriptTurns()" class="btn btn-ghost text-xs p-1.5" title="Reset transcript">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          </button>
+
+          <button onclick="toggleRightSidebar()" class="btn btn-ghost text-xs p-1.5" title="Toggle Run Settings Panel">
+            <i data-lucide="panel-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Scrollable Tab Viewports -->
+      <main class="flex-1 overflow-y-auto px-4 sm:px-6 py-5">
+        <div class="max-w-4xl mx-auto">
+
+          <!-- ================================================================
+               TAB 1: SPEECH PLAYGROUND (Clean AI Studio Composer)
+               ================================================================ -->
+          <section id="tab-director" class="tab-panel space-y-4">
+            
+            <!-- Subheader above turns -->
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2.5 flex-wrap">
+                <span class="text-xs font-medium text-[#C4C7C5]">Transcript &amp; Turn Direction</span>
+                <span id="char-count-indicator" class="text-xs font-mono text-[#8E918F]">0 chars &bull; 1 turn</span>
+                <span id="lint-status-badge" class="badge badge-emerald">Optimal</span>
+              </div>
+
+              <button onclick="addScriptTurn()" class="btn btn-secondary text-xs py-1 px-3">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-[#A8C7FA]"></i>
+                <span>Add turn</span>
+              </button>
+            </div>
+
+            <!-- Script Turns Stack -->
+            <div id="script-turns-container" class="space-y-3">
+              <!-- Populated by app.js -->
+            </div>
+
+            <!-- Compact Quick-Insert Strip (Style + Vocal Tags + Backchannels) -->
+            <div class="glass-card p-3.5 space-y-3">
+              <!-- Row 1: Style Presets -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-[11px] font-medium text-[#8E918F] mr-1">Style:</span>
+                <span onclick="applyStylePreset('cheerful and friendly')" class="style-chip">cheerful &amp; friendly</span>
+                <span onclick="applyStylePreset('calm and relaxed')" class="style-chip">calm &amp; relaxed</span>
+                <span onclick="applyStylePreset('whispered urgently')" class="style-chip">whispered urgently</span>
+                <span onclick="applyStylePreset('warm and enthusiastic')" class="style-chip">warm &amp; enthusiastic</span>
+                <span onclick="applyStylePreset('sarcastic and dry')" class="style-chip">sarcastic &amp; dry</span>
+                <span onclick="applyStylePreset('speaking rapidly, excited inflection')" class="style-chip">rapid &amp; excited</span>
+                <span onclick="applyStylePreset('')" class="style-chip text-[#8E918F]">clear</span>
+              </div>
+
+              <!-- Row 2: Vocal Tags & Backchannels -->
+              <div class="pt-2.5 border-t border-[#282A2C] space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-1.5" id="vocal-tag-categories">
+                    <span class="text-[11px] font-medium text-[#8E918F] mr-1">Insert Tag:</span>
+                    <button onclick="filterVocalTags('all')" class="vocal-cat-btn badge badge-indigo cursor-pointer" data-cat="all">All</button>
+                    <button onclick="filterVocalTags('pauses')" class="vocal-cat-btn badge bg-[#282A2C] text-[#C4C7C5] cursor-pointer" data-cat="pauses">Pauses</button>
+                    <button onclick="filterVocalTags('joy')" class="vocal-cat-btn badge bg-[#282A2C] text-[#C4C7C5] cursor-pointer" data-cat="joy">Laugh</button>
+                    <button onclick="filterVocalTags('emotion')" class="vocal-cat-btn badge bg-[#282A2C] text-[#C4C7C5] cursor-pointer" data-cat="emotion">Emotion</button>
+                    <button onclick="filterVocalTags('vocal')" class="vocal-cat-btn badge bg-[#282A2C] text-[#C4C7C5] cursor-pointer" data-cat="vocal">Dynamic</button>
+                  </div>
+
+                  <!-- Backchannel Quick Pills -->
+                  <div class="flex flex-wrap items-center gap-1">
+                    <span class="text-[11px] text-[#8E918F] mr-0.5">Overlap:</span>
+                    <button onclick="insertTextAtCursor('|oh hmm| ')" class="vocal-pill text-[#78D9EC]">|oh hmm|</button>
+                    <button onclick="insertTextAtCursor('|oh really?| ')" class="vocal-pill text-[#78D9EC]">|oh really?|</button>
+                    <button onclick="insertTextAtCursor('|absolutely| ')" class="vocal-pill text-[#78D9EC]">|absolutely|</button>
+                  </div>
+                </div>
+
+                <div id="vocal-tags-container" class="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Unobtrusive Collapsible Inspector (Lint Guidance & Live JSON Payload) -->
+            <details class="glass-card group">
+              <summary class="px-4 py-2.5 text-xs text-[#8E918F] hover:text-[#E3E3E3] cursor-pointer flex items-center justify-between select-none">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="braces" class="w-3.5 h-3.5 text-[#A8C7FA]"></i>
+                  <span>Inspect Vertex AI JSON Payload &amp; Prompting Checks</span>
+                </span>
+                <i data-lucide="chevron-down" class="w-4 h-4 transition-transform group-open:rotate-180"></i>
+              </summary>
+              <div class="p-4 pt-2 border-t border-[#282A2C] space-y-3">
+                <ul id="lint-messages" class="text-xs text-[#C4C7C5] space-y-1"></ul>
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] font-mono text-[#8E918F]">POST :generateContent</span>
+                  <button onclick="copyLivePayload()" class="btn btn-ghost text-xs py-1 px-2">
+                    <i data-lucide="copy" class="w-3 h-3"></i> Copy JSON
+                  </button>
+                </div>
+                <pre id="live-payload-preview" class="code-block max-h-48"></pre>
+              </div>
+            </details>
+
+          </section>
+
+          <!-- ================================================================
+               TAB 2: LIVE STREAMING LAB (streamGenerateContent)
+               ================================================================ -->
+          <section id="tab-streaming" class="tab-panel hidden space-y-5">
+            <div class="glass-card p-5 space-y-5">
+              <div class="flex flex-wrap items-center justify-between gap-4 border-b border-[#282A2C] pb-4">
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h2 class="text-base font-semibold text-white">Real-Time PCM Streaming</h2>
+                    <span class="badge badge-cyan">streamGenerateContent?alt=sse</span>
+                  </div>
+                  <p class="text-xs text-[#8E918F] mt-1">
+                    Streams headerless 16-bit PCM (<code class="mono text-[#78D9EC]">audio/l16</code> @ 24kHz) and schedules gapless WebAudio playback.
+                  </p>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button onclick="triggerStreamSynthesis()" id="stream-lab-start-btn" class="btn btn-primary">
+                    <i data-lucide="activity" class="w-4 h-4"></i> Stream Current Script
+                  </button>
+                  <button onclick="downloadLastStreamPcm()" id="stream-download-pcm-btn" disabled class="btn btn-secondary text-xs">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i> Export .pcm
+                  </button>
+                </div>
+              </div>
+
+              <!-- Container-Responsive Telemetry Grid -->
+              <div class="telemetry-grid">
+                <div class="p-3.5 rounded-lg bg-[#131314] border border-[#282A2C]">
+                  <span class="text-[11px] text-[#8E918F] block truncate">Time to First Chunk</span>
+                  <div id="stream-metric-ttfb" class="text-xl font-semibold font-mono text-[#78D9EC] mt-0.5">— ms</div>
+                </div>
+                <div class="p-3.5 rounded-lg bg-[#131314] border border-[#282A2C]">
+                  <span class="text-[11px] text-[#8E918F] block truncate">PCM Chunks</span>
+                  <div id="stream-metric-chunks" class="text-xl font-semibold font-mono text-[#A8C7FA] mt-0.5">0</div>
+                </div>
+                <div class="p-3.5 rounded-lg bg-[#131314] border border-[#282A2C]">
+                  <span class="text-[11px] text-[#8E918F] block truncate">Audio Payload</span>
+                  <div id="stream-metric-bytes" class="text-xl font-semibold font-mono text-[#E3E3E3] mt-0.5">0 KB</div>
+                </div>
+                <div class="p-3.5 rounded-lg bg-[#131314] border border-[#282A2C]">
+                  <span class="text-[11px] text-[#8E918F] block truncate">Duration</span>
+                  <div id="stream-metric-duration" class="text-xl font-semibold font-mono text-[#6DD58C] mt-0.5">0.00 s</div>
+                </div>
+              </div>
+
+              <!-- Chunk Log -->
+              <div>
+                <div class="text-xs font-medium text-[#8E918F] mb-2">Live SSE Chunk Waterfall</div>
+                <div id="stream-chunk-log" class="bg-[#131314] border border-[#282A2C] rounded-lg p-3.5 h-64 overflow-y-auto font-mono text-xs space-y-1.5">
+                  <div class="text-[#8E918F]">Click "Stream Current Script" to stream live 24kHz PCM chunks...</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================================
+               TAB 3: VOICE LIBRARY (30 Prebuilt + 2,000+ Extended)
+               ================================================================ -->
+          <section id="tab-library" class="tab-panel hidden space-y-4">
+            <div class="glass-card p-4 space-y-3.5">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 class="text-base font-semibold text-white">Voice Library</h2>
+                  <p class="text-xs text-[#8E918F]">Audition and assign any of the 30 official voices or 2,000+ Extended Library voices.</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                  <span class="text-xs text-[#8E918F] whitespace-nowrap">Assign to:</span>
+                  <select id="library-assign-target" class="select-field text-xs w-40">
+                    <option value="single">Single Speaker</option>
+                    <option value="speakerA">Speaker 1</option>
+                    <option value="speakerB">Speaker 2</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Fluid Flex-Wrap Filter Bar (Never cuts off dropdowns or buttons) -->
+              <div class="flex flex-wrap items-center gap-2.5">
+                <div class="relative flex-1 min-w-[200px]">
+                  <input id="voice-search-input" type="text" placeholder="Search name, trait, accent (e.g. Kore, British, warm)..."
+                    class="input-field pl-8" oninput="renderVoiceExplorer()" />
+                  <i data-lucide="search" class="w-3.5 h-3.5 text-[#8E918F] absolute left-3 top-2.5"></i>
+                </div>
+                <div class="w-44 shrink-0">
+                  <select id="voice-source-filter" onchange="renderVoiceExplorer()" class="select-field">
+                    <option value="all">All Voices</option>
+                    <option value="prebuilt30">30 Official Prebuilt</option>
+                    <option value="extended">Extended Library</option>
+                    <option value="custom">Saved Custom Voices</option>
+                  </select>
+                </div>
+                <div class="w-36 shrink-0">
+                  <select id="voice-gender-filter" onchange="renderVoiceExplorer()" class="select-field">
+                    <option value="all">All Genders</option>
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                  </select>
+                </div>
+                <button onclick="queryLiveExtendedLibrary()" class="btn btn-secondary text-xs shrink-0">
+                  <i data-lucide="cloud-download" class="w-3.5 h-3.5"></i>
+                  <span>Fetch API</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Auto-Fill Responsive Voice Grid (Cards never narrower than 245px) -->
+            <div id="voices-explorer-grid" class="voice-grid">
+              <!-- Populated by JS -->
+            </div>
+          </section>
+
+          <!-- ================================================================
+               TAB 4: DESIGN A VOICE (VOICE_TYPE_PROMPTED)
+               ================================================================ -->
+          <section id="tab-design" class="tab-panel hidden space-y-4">
+            <div class="glass-card p-5 space-y-4">
+              <div class="border-b border-[#282A2C] pb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 class="text-base font-semibold text-white">Design a Custom Voice</h2>
+                  <p class="text-xs text-[#8E918F] mt-0.5">Generate a persistent <code class="mono text-[#A8C7FA]">voice_...</code> ID from a natural-language persona description.</p>
+                </div>
+                <span class="badge badge-amber">VOICE_TYPE_PROMPTED</span>
+              </div>
+
+              <!-- Quick Persona Presets -->
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-xs text-[#8E918F] mr-1">Examples:</span>
+                <button onclick="loadVoiceDesignPreset('weather')" class="btn btn-secondary text-xs py-1 px-2.5">Weather Reporter</button>
+                <button onclick="loadVoiceDesignPreset('astronomer')" class="btn btn-secondary text-xs py-1 px-2.5">British Astronomer</button>
+                <button onclick="loadVoiceDesignPreset('announcer')" class="btn btn-secondary text-xs py-1 px-2.5">Sports Announcer</button>
+                <button onclick="loadVoiceDesignPreset('detective')" class="btn btn-secondary text-xs py-1 px-2.5">Noir Detective</button>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs text-[#C4C7C5] mb-1">Persona / Role</label>
+                  <select id="design-display-name" onchange="onDesignPersonaSelect(this.value)" class="select-field">
+                    <option value="Cheerful Weather Reporter">Cheerful Weather Reporter</option>
+                    <option value="Studio Podcaster">Studio Podcaster</option>
+                    <option value="Audiobook Narrator">Audiobook Narrator</option>
+                    <option value="Documentary Narrator">Documentary Narrator</option>
+                    <option value="News Anchor">News Anchor</option>
+                    <option value="Warm British Astronomer">Warm British Astronomer</option>
+                    <option value="Crisp Sports Announcer">Crisp Sports Announcer</option>
+                    <option value="Noir Cyberpunk Detective">Noir Cyberpunk Detective</option>
+                    <option value="Customer Support Concierge">Customer Support Concierge</option>
+                    <option value="Mindfulness & Meditation Guide">Mindfulness &amp; Meditation Guide</option>
+                    <option value="E-Learning Educator">E-Learning Educator</option>
+                    <option value="Game / Anime Character">Game / Anime Character</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#C4C7C5] mb-1">Gender</label>
+                  <select id="design-gender" class="select-field">
+                    <option value="female">female</option>
+                    <option value="male">male</option>
+                    <option value="neutral">neutral</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-[#C4C7C5] mb-1">Language</label>
+                  <select id="design-lang" class="select-field font-mono">
+                    <option value="en-US">en-US (American)</option>
+                    <option value="en-GB">en-GB (British)</option>
+                    <option value="en-AU">en-AU (Australian)</option>
+                    <option value="en-IN">en-IN (Indian)</option>
+                    <option value="es-ES">es-ES (Spanish)</option>
+                    <option value="es-MX">es-MX (Mexican Spanish)</option>
+                    <option value="fr-FR">fr-FR (French)</option>
+                    <option value="de-DE">de-DE (German)</option>
+                    <option value="ja-JP">ja-JP (Japanese)</option>
+                    <option value="hi-IN">hi-IN (Hindi)</option>
+                    <option value="pt-BR">pt-BR (Portuguese)</option>
+                    <option value="ko-KR">ko-KR (Korean)</option>
+                    <option value="it-IT">it-IT (Italian)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs text-[#C4C7C5] mb-1">Voice Persona Prompt (1–2 concise sentences defining age, timbre &amp; accent)</label>
+                <textarea id="design-prompt-input" rows="3" class="textarea-field leading-relaxed">An enthusiastic local TV weather reporter in her 30s. She speaks with bright, bubbly energy.</textarea>
+              </div>
+
+              <div class="flex items-center justify-end pt-1">
+                <button id="btn-create-designed-voice" onclick="submitVoiceDesign()" class="btn btn-primary px-5">
+                  <i data-lucide="wand-2" class="w-4 h-4"></i> Create Voice
+                </button>
+              </div>
+
+              <!-- Created Voice Result -->
+              <div id="designed-voice-result" class="hidden p-4 rounded-lg bg-[#131314] border border-[#A8C7FA]/40 space-y-2.5">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span class="badge badge-emerald">Saved to Project Vault</span>
+                    <h4 id="designed-result-name" class="text-sm font-semibold text-white mt-1"></h4>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <code id="designed-result-id" class="px-2 py-1 rounded bg-[#1E1F20] text-[#A8C7FA] font-mono text-xs border border-[#333537]"></code>
+                    <button onclick="useCreatedVoiceInDirector(document.getElementById('designed-result-id').textContent)" class="btn btn-secondary text-xs py-1 px-3">
+                      Use in Playground
+                    </button>
+                  </div>
+                </div>
+                <div class="flex flex-wrap items-center gap-3">
+                  <button id="designed-play-sample-btn" class="btn btn-primary text-xs py-1 px-3">
+                    <i data-lucide="volume-2" class="w-3.5 h-3.5"></i> Play Sample Audio
+                  </button>
+                  <span id="designed-usage-tokens" class="text-xs text-[#8E918F] font-mono"></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================================
+               TAB 5: CLONE A VOICE (VOICE_TYPE_REPLICATED)
+               ================================================================ -->
+          <section id="tab-replication" class="tab-panel hidden space-y-4">
+            <div class="glass-card p-5 space-y-5">
+              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#282A2C] pb-3">
+                <div>
+                  <h2 class="text-base font-semibold text-white">Clone a Voice (Voice Replication)</h2>
+                  <p class="text-xs text-[#8E918F] mt-0.5">Upload or record a 10–30s reference clip + verbatim speaker consent statement (auto-resampled to 24kHz mono WAV).</p>
+                </div>
+
+                <div class="flex items-center bg-[#131314] p-1 rounded-full border border-[#282A2C] shrink-0">
+                  <button id="rep-store-true-btn" onclick="setReplicationStoreMode(true)" class="px-3 py-1 rounded-full text-xs font-medium bg-[#A8C7FA] text-[#062E6F]">
+                    Stored Voice (1yr)
+                  </button>
+                  <button id="rep-store-false-btn" onclick="setReplicationStoreMode(false)" class="px-3 py-1 rounded-full text-xs font-medium text-[#8E918F] hover:text-white">
+                    Stateless Key (7d)
+                  </button>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Step 1: Reference Audio -->
+                <div class="p-4 rounded-lg bg-[#131314] border border-[#282A2C] space-y-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="badge badge-indigo">1. Reference Audio (10–30s)</span>
+                    <span id="ref-audio-status" class="text-xs font-mono text-[#8E918F] truncate">No audio</span>
+                  </div>
+                  <p class="text-xs text-[#C4C7C5] italic leading-relaxed bg-[#1E1F20] p-3 rounded border border-[#282A2C]">
+                    "The morning fog had just begun to lift over the harbor when the first fishing boats returned. Gulls circled overhead, calling to one another, while the smell of salt and fresh bread drifted from the bakery on the corner."
+                  </p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-record-ref" onclick="toggleMicRecording('ref')" class="btn btn-secondary text-xs">
+                      <i data-lucide="mic" class="w-3.5 h-3.5 text-[#F28B82]"></i>
+                      <span id="btn-record-ref-label">Record</span>
+                    </button>
+                    <label class="btn btn-secondary text-xs cursor-pointer">
+                      <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                      <span>Upload</span>
+                      <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload('ref', this.files[0])" />
+                    </label>
+                    <button onclick="generateSyntheticDemoSamples()" class="btn btn-ghost text-xs">
+                      Load Demo WAVs
+                    </button>
+                  </div>
+                  <audio id="ref-audio-preview" controls class="w-full h-8 hidden"></audio>
+                </div>
+
+                <!-- Step 2: Consent Audio -->
+                <div class="p-4 rounded-lg bg-[#131314] border border-[#282A2C] space-y-3">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="badge badge-emerald">2. Verbatim Consent Audio</span>
+                    <span id="consent-audio-status" class="text-xs font-mono text-[#8E918F] truncate">No audio</span>
+                  </div>
+                  <select id="consent-lang-select" onchange="updateConsentStatementDisplay()" class="select-field text-xs"></select>
+                  <p id="consent-statement-text" class="text-xs font-medium text-white leading-relaxed bg-[#1E1F20] p-3 rounded border border-[#282A2C]">
+                    "I am the owner of this voice and have consented to the creation of a synthetic model of my voice through the use of Google Cloud."
+                  </p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button id="btn-record-consent" onclick="toggleMicRecording('consent')" class="btn btn-secondary text-xs">
+                      <i data-lucide="mic" class="w-3.5 h-3.5 text-[#F28B82]"></i>
+                      <span id="btn-record-consent-label">Record</span>
+                    </button>
+                    <label class="btn btn-secondary text-xs cursor-pointer">
+                      <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                      <span>Upload</span>
+                      <input type="file" accept="audio/*" class="hidden" onchange="handleAudioUpload('consent', this.files[0])" />
+                    </label>
+                  </div>
+                  <audio id="consent-audio-preview" controls class="w-full h-8 hidden"></audio>
+                </div>
+              </div>
+
+              <div class="pt-3 border-t border-[#282A2C] flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                  <div id="rep-display-name-wrap">
+                    <select id="rep-display-name" class="select-field w-56 text-xs">
+                      <option value="Replicated Speaker">Replicated Speaker</option>
+                      <option value="Cloned Podcaster">Cloned Podcaster</option>
+                      <option value="Cloned Narrator">Cloned Narrator</option>
+                      <option value="Cloned Host">Cloned Host</option>
+                      <option value="Cloned Executive">Cloned Executive</option>
+                      <option value="Cloned Storyteller">Cloned Storyteller</option>
+                      <option value="Cloned Educator">Cloned Educator</option>
+                      <option value="Cloned Support Agent">Cloned Support Agent</option>
+                    </select>
+                  </div>
+                  <span id="rep-mode-summary" class="text-xs text-[#8E918F]">
+                    Returns a stored <code class="mono text-[#A8C7FA]">voice_...</code> ID.
+                  </span>
+                </div>
+                <button id="btn-submit-replication" onclick="submitVoiceReplication()" class="btn btn-primary px-5">
+                  <i data-lucide="fingerprint" class="w-4 h-4"></i> Clone Voice
+                </button>
+              </div>
+
+              <div id="replicated-voice-result" class="hidden p-4 rounded-lg bg-[#131314] border border-[#6DD58C]/40 space-y-2">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span id="rep-result-badge" class="badge badge-emerald">Ready</span>
+                    <h4 id="rep-result-title" class="text-sm font-semibold text-white mt-1"></h4>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <button onclick="copyReplicatedIdentifier()" class="btn btn-secondary text-xs py-1 px-2.5">Copy ID</button>
+                    <button onclick="useCreatedVoiceInDirector(window.lastReplicatedIdOrKey)" class="btn btn-primary text-xs py-1 px-3">Use in Playground</button>
+                  </div>
+                </div>
+                <div class="p-2.5 rounded bg-[#1E1F20] font-mono text-xs text-[#A8C7FA] break-all" id="rep-result-identifier"></div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================================
+               TAB 6: SAVED VOICES (Project Vault)
+               ================================================================ -->
+          <section id="tab-vault" class="tab-panel hidden space-y-4">
+            <div class="glass-card p-5 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[#282A2C] pb-3">
+                <div>
+                  <h2 class="text-base font-semibold text-white">Saved Voices &amp; Keys</h2>
+                  <p class="text-xs text-[#8E918F]">Manage project-stored voices (<code class="mono">voice_...</code>) and stateless replication keys (<code class="mono">voicekey_...</code>).</p>
+                </div>
+                <button onclick="refreshProjectVoices()" class="btn btn-secondary text-xs">
+                  <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sync from API
+                </button>
+              </div>
+
+              <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                  <thead>
+                    <tr class="border-b border-[#282A2C] text-[11px] uppercase text-[#8E918F]">
+                      <th class="py-2.5 px-3">Name</th>
+                      <th class="py-2.5 px-3">ID / Key</th>
+                      <th class="py-2.5 px-3">Type</th>
+                      <th class="py-2.5 px-3">TTL</th>
+                      <th class="py-2.5 px-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="vault-table-body" class="divide-y divide-[#282A2C] text-xs"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================================================================
+               TAB 7: GET CODE & LANGUAGES
+               ================================================================ -->
+          <section id="tab-code" class="tab-panel hidden space-y-5">
+            <div class="glass-card p-5 space-y-4">
+              <div class="flex flex-wrap items-center justify-between gap-3 border-b border-[#282A2C] pb-3">
+                <div>
+                  <h2 class="text-base font-semibold text-white">Get Code</h2>
+                  <p class="text-xs text-[#8E918F]">Ready-to-run Vertex AI SDK &amp; REST snippets for your current playground configuration.</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1 bg-[#131314] p-1 rounded-lg border border-[#282A2C]">
+                  <button id="code-tab-py-unary" onclick="setCodeView('py_unary')" class="px-2.5 py-1 rounded text-xs font-medium bg-[#A8C7FA] text-[#062E6F]">Python (Unary)</button>
+                  <button id="code-tab-py-stream" onclick="setCodeView('py_stream')" class="px-2.5 py-1 rounded text-xs font-medium text-[#8E918F] hover:text-white">Python (Stream)</button>
+                  <button id="code-tab-curl-unary" onclick="setCodeView('curl_unary')" class="px-2.5 py-1 rounded text-xs font-medium text-[#8E918F] hover:text-white">cURL</button>
+                  <button id="code-tab-curl-stream" onclick="setCodeView('curl_stream')" class="px-2.5 py-1 rounded text-xs font-medium text-[#8E918F] hover:text-white">SSE cURL</button>
+                </div>
+              </div>
+
+              <div class="flex justify-end">
+                <button onclick="copyGeneratedCode()" class="btn btn-secondary text-xs py-1 px-3">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy code
+                </button>
+              </div>
+              <pre id="exported-code-block" class="code-block h-80"></pre>
+            </div>
+
+            <div class="glass-card p-5 space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold text-white">130 Auto-Detected Languages</h3>
+                <input id="lang-search-input" type="text" placeholder="Filter languages..."
+                  class="input-field text-xs w-56" oninput="renderLanguageBadges(this.value)" />
+              </div>
+              <div id="languages-badge-cloud" class="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto"></div>
+            </div>
+          </section>
+
+        </div>
+      </main>
+
+      <!-- ====================================================================
+           DOCKED BOTTOM BAR: AUDIO PLAYER + RUN / STREAM BUTTONS (Non-Deforming)
+           ==================================================================== -->
+      <footer class="h-14 border-t border-[#282A2C] bg-[#1E1F20] px-4 sm:px-6 flex items-center justify-between gap-3 shrink-0 overflow-hidden">
+        
+        <!-- Left: Play/Pause + Single-Line Track Info -->
+        <div class="flex items-center gap-3 min-w-0 max-w-[260px] sm:max-w-[300px]">
+          <button id="deck-play-btn" onclick="toggleDeckPlayback()" class="w-8 h-8 rounded-full bg-[#282A2C] hover:bg-[#37393B] border border-[#444746] flex items-center justify-center text-[#E3E3E3] transition-colors shrink-0">
+            <i data-lucide="play" id="deck-play-icon" class="w-3.5 h-3.5 fill-current ml-0.5"></i>
+          </button>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 min-w-0">
+              <span id="deck-track-title" class="text-xs font-medium text-[#E3E3E3] truncate">Ready</span>
+              <span id="deck-synthid-badge" class="badge badge-cyan text-[9px] py-0 px-1.5 shrink-0">SynthID</span>
+            </div>
+            <div class="flex items-center gap-1.5 text-[11px] text-[#8E918F] font-mono whitespace-nowrap truncate">
+              <span id="deck-track-meta">24kHz &bull; 0.00s</span>
+              <span class="hidden xl:inline">&bull; <span id="deck-latency">— ms</span></span>
+              <span class="hidden 2xl:inline">&bull; <span id="deck-filesize">— KB</span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Center: Flexible Waveform Visualizer + Download -->
+        <div class="flex-1 min-w-[80px] max-w-md hidden md:flex items-center gap-2">
+          <div class="flex-1 h-8 bg-[#131314] border border-[#282A2C] rounded-lg overflow-hidden relative flex items-center min-w-[60px]">
+            <canvas id="waveform-canvas" class="w-full h-full"></canvas>
+            <div id="deck-status-overlay" class="absolute inset-0 flex items-center justify-center pointer-events-none text-[10px] font-mono text-[#8E918F] truncate px-2">
+              Audio output
+            </div>
+          </div>
+          <audio id="master-audio-element" class="hidden"></audio>
+        </div>
+
+        <!-- Right: Download + Stream + Primary Run Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="deck-download-btn" onclick="downloadCurrentAudio()" disabled class="btn btn-ghost text-xs py-1.5 px-2.5" title="Download generated audio">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span id="deck-download-label" class="hidden lg:inline text-xs">Download</span>
+          </button>
+
+          <button id="btn-stream-from-director" onclick="triggerStreamSynthesis()" class="btn btn-secondary text-xs py-1.5 px-3" title="Stream real-time 24kHz PCM via SSE">
+            <i data-lucide="activity" class="w-3.5 h-3.5 text-[#78D9EC]"></i>
+            <span>Stream</span>
+          </button>
+
+          <button id="btn-generate-unary" onclick="triggerUnarySynthesis()" class="btn btn-primary text-xs py-1.5 px-4">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Run</span>
+            <span class="text-[10px] opacity-75 font-mono ml-0.5 hidden sm:inline">&#8984;&#9166;</span>
+          </button>
+        </div>
+
+      </footer>
+    </div>
+
+    <!-- ======================================================================
+         3. RIGHT SIDEBAR: "RUN SETTINGS" PANEL (Google AI Studio Style)
+         ====================================================================== -->
+    <aside id="right-settings-sidebar" class="w-72 xl:w-80 bg-[#1E1F20] border-l border-[#282A2C] flex flex-col justify-between shrink-0 overflow-y-auto">
+      <div class="p-4 pb-8 space-y-4">
+        
+        <div class="flex items-center justify-between border-b border-[#282A2C] pb-2.5">
+          <span class="text-xs font-semibold text-[#E3E3E3]">Run settings</span>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-mono text-[#8E918F]">speechConfig</span>
+            <button onclick="toggleRightSidebar()" class="text-[#8E918F] hover:text-white p-0.5" title="Close Run settings">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 1. Model Selection -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-[#C4C7C5]">Model</label>
+          <div class="grid grid-cols-1 gap-1.5 bg-[#131314] p-1.5 rounded-lg border border-[#282A2C]">
+            <button id="model-btn-flash" onclick="setModel('gemini-3.8-flash-tts')" class="px-3 py-2 rounded-md text-xs font-medium text-left transition-all bg-[#A8C7FA]/15 text-[#A8C7FA] border border-[#A8C7FA]/40">
+              <div class="flex items-center justify-between gap-1">
+                <span class="font-semibold truncate">Gemini 3.8 Flash TTS</span>
+                <span class="text-[10px] font-mono shrink-0">130 langs</span>
+              </div>
+              <div class="text-[11px] opacity-80 font-normal mt-0.5 truncate">Studio acting, vocal bursts &amp; overlap</div>
+            </button>
+            <button id="model-btn-lite" onclick="setModel('gemini-3.8-flash-lite-tts')" class="px-3 py-2 rounded-md text-xs font-medium text-left transition-all text-[#8E918F] hover:text-white border border-transparent">
+              <div class="flex items-center justify-between gap-1">
+                <span class="font-semibold truncate">Gemini 3.8 Flash-Lite TTS</span>
+                <span class="text-[10px] font-mono shrink-0">101 langs</span>
+              </div>
+              <div class="text-[11px] opacity-80 font-normal mt-0.5 truncate">Low-latency voice agents &amp; batch</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Speaker Mode -->
+        <div class="space-y-1.5">
+          <label class="block text-xs font-medium text-[#C4C7C5]">Speaker mode</label>
+          <div class="grid grid-cols-3 gap-1 bg-[#131314] p-1 rounded-lg border border-[#282A2C]">
+            <button id="mode-btn-single" onclick="setSynthesisMode('single')" class="py-1.5 px-2 rounded text-xs font-medium bg-[#282A2C] text-[#A8C7FA] transition-all">
+              Single
+            </button>
+            <button id="mode-btn-multi" onclick="setSynthesisMode('multi')" class="py-1.5 px-2 rounded text-xs font-medium text-[#8E918F] hover:text-white transition-all">
+              2-Speaker
+            </button>
+            <button id="mode-btn-stitch" onclick="setSynthesisMode('stitch')" class="py-1.5 px-2 rounded text-xs font-medium text-[#8E918F] hover:text-white transition-all" title="3+ speakers stitched via L16 PCM">
+              3+ Cast
+            </button>
+          </div>
+        </div>
+
+        <!-- 3A. Single-Speaker Voice Selection -->
+        <div id="single-voice-panel" class="space-y-3">
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label class="text-xs font-medium text-[#C4C7C5]">Voice</label>
+              <button onclick="switchTab('library')" class="text-[11px] text-[#A8C7FA] hover:underline">Browse all 2,000+</button>
+            </div>
+            <div class="flex items-center gap-1.5 min-w-0">
+              <select id="single-voice-select" onchange="onSingleVoiceSelectChange(this.value)" class="select-field flex-1 min-w-0"></select>
+              <button onclick="auditionVoice(state.voice, state.voice)" class="btn btn-secondary p-2 shrink-0" title="Audition selected voice">
+                <i data-lucide="volume-2" class="w-3.5 h-3.5 text-[#A8C7FA]"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-[11px] text-[#8E918F]">Custom Voice ID or Replication Key</label>
+            <input id="custom-voice-id-input" type="text" placeholder="voice_... or voicekey_..."
+              class="input-field font-mono text-xs" oninput="onCustomVoiceInput(this.value)" />
+          </div>
+        </div>
+
+        <!-- 3B. Multi-Speaker Voice Bindings -->
+        <div id="multi-voice-panel" class="hidden space-y-3">
+          <div class="p-2.5 rounded-lg bg-[#131314] border border-[#282A2C] text-[11px] text-[#C4C7C5] space-y-0.5">
+            <div id="multi-mode-hint-title" class="font-semibold text-[#A8C7FA]">2-Speaker Dialogue</div>
+            <p id="multi-mode-hint-desc" class="text-[#8E918F] leading-relaxed">
+              Assign voices to speakers. Use <code class="mono text-[#78D9EC]">|pipes|</code> for listener overlap.
+            </p>
+          </div>
+
+          <div id="speaker-bindings-list" class="space-y-2"></div>
+
+          <button id="add-speaker-binding-btn" onclick="addSpeakerBinding()" class="hidden btn btn-secondary w-full text-xs py-1.5">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Add Speaker
+          </button>
+        </div>
+
+        <!-- 4. Output Encoding -->
+        <div class="space-y-1.5 pt-2 border-t border-[#282A2C]">
+          <label class="block text-xs font-medium text-[#C4C7C5]">Output audio format</label>
+          <select id="output-format-select" onchange="onFormatChange(this.value)" class="select-field text-xs font-mono">
+            <option value="AUDIO_WAV">AUDIO_WAV (24kHz WAV)</option>
+            <option value="AUDIO_L16">AUDIO_L16 (24kHz Raw PCM)</option>
+            <option value="AUDIO_MULAW">AUDIO_MULAW (8kHz μ-law)</option>
+            <option value="AUDIO_ALAW">AUDIO_ALAW (8kHz A-law)</option>
+          </select>
+        </div>
+
+        <!-- 5. Quick Shortcuts to Custom Voice Creation -->
+        <div class="pt-3 border-t border-[#282A2C] space-y-2">
+          <span class="block text-[11px] font-medium text-[#8E918F]">Custom Voices</span>
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="switchTab('design')" class="btn btn-secondary text-xs py-1.5 px-2 justify-center">
+              <i data-lucide="wand-2" class="w-3.5 h-3.5 text-[#FCD34D] shrink-0"></i>
+              <span class="truncate">Design Voice</span>
+            </button>
+            <button onclick="switchTab('replication')" class="btn btn-secondary text-xs py-1.5 px-2 justify-center">
+              <i data-lucide="mic" class="w-3.5 h-3.5 text-[#F28B82] shrink-0"></i>
+              <span class="truncate">Clone Voice</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ========================================================================
+       VERTEX AI SETTINGS & CREDENTIALS MODAL
+       ======================================================================== -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full p-5 space-y-4">
+      <div class="flex items-center justify-between border-b border-[#282A2C] pb-3">
+        <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+          <i data-lucide="settings" class="w-4 h-4 text-[#A8C7FA]"></i>
+          Vertex AI Connection Settings
+        </h3>
+        <button onclick="toggleSettingsModal()" class="text-[#8E918F] hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-[#C4C7C5] mb-1">Google Cloud Project ID</label>
+          <input id="modal-project-id" type="text" placeholder="your-project-id" class="input-field font-mono" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-[#C4C7C5] mb-1">Location</label>
+          <input id="modal-location" type="text" value="global" readonly class="input-field font-mono opacity-70 cursor-not-allowed" />
+        </div>
+
+        <div>
+          <label class="block font-medium text-[#C4C7C5] mb-1">Optional Bearer Access Token Override</label>
+          <input id="modal-access-token" type="password" placeholder="Leave blank to use ADC / gcloud auth" class="input-field font-mono" />
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-3 border-t border-[#282A2C]">
+        <button onclick="toggleSettingsModal()" class="btn btn-ghost text-xs">Cancel</button>
+        <button onclick="saveSettingsModal()" class="btn btn-primary text-xs">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
