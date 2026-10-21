@@ -1,6 +1,6 @@
 # Gemini 3.8 Flash TTS — Enterprise Voice Studio (Vertex AI)
 
-A full-featured, studio-grade Web UI & FastAPI backend for **Gemini 3.8 Flash TTS** (`gemini-3.8-flash-tts`) and **Gemini 3.8 Flash-Lite TTS** (`gemini-3.8-flash-lite-tts`) on Google Cloud Vertex AI / Gemini Enterprise Agent Platform (`aiplatform.googleapis.com`, `global` region).
+A full-featured, studio-grade Web UI & FastAPI backend for **Gemini 3.8 Flash TTS** (`gemini-3.8-flash-tts`) and **Gemini 3.8 Flash-Lite TTS** (`gemini-3.8-flash-lite-tts`) on Google Cloud Vertex AI / Gemini platform.
 
 ## Supported Capabilities
 
