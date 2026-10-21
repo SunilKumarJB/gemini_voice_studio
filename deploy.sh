@@ -7,7 +7,7 @@
 #
 # Examples:
 #   ./deploy.sh
-#   ./deploy.sh llm-project-52521 us-central1 gemini-voice-studio
+#   ./deploy.sh <PROJECT_ID> us-central1 gemini-voice-studio
 # =============================================================================
 
 set -euo pipefail
