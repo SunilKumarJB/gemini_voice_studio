@@ -1,4 +1,4 @@
-# Gemini 3.8 Flash TTS — Enterprise Voice Studio (Vertex AI)
+# Gemini 3.8 Flash TTS — Enterprise Voice Studio
 
 A full-featured, studio-grade Web UI & FastAPI backend for **Gemini 3.8 Flash TTS** (`gemini-3.8-flash-tts`) and **Gemini 3.8 Flash-Lite TTS** (`gemini-3.8-flash-lite-tts`) on Google Cloud Vertex AI / Gemini platform.
 
@@ -47,5 +47,14 @@ Open `http://localhost:8000` in your browser.
 ./deploy.sh
 
 # Or specify Project ID, Region, and Service Name explicitly:
+```
+
+<div align="center">
+
+[**Sunil Kumar**](https://www.linkedin.com/in/sunilkumar88/)
+
+<sub>A Gemini use-case demonstration. Not an official Google product.</sub>
+
+</div>
 ./deploy.sh llm-project-52521 us-central1 gemini-voice-studio
 ```
